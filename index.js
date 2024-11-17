@@ -1,17 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const bodyParser = require('body-parser');
+const Color = require('./config/database'); // Importa el modelo de la base de datos
+
 const PORT = 3000;
 const app = express();
-const bodyParser = require('body-parser');
-const fs = require('fs');
 
-// Middleware para parsear JSON
+// Middleware
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(cors());
-
-// Archivo donde se guardarán los datos
-const DATA_FILE = './colors.json';
 
 // Rango aproximado basado en las tiras
 const HARDNESS_RANGES = [
@@ -43,25 +41,11 @@ function getWaterHardness(color) {
     return closestMatch;
 }
 
-// Función para leer datos del archivo JSON
-function readDataFromFile() {
-    if (!fs.existsSync(DATA_FILE)) {
-        return []; // Si el archivo no existe, retorna una lista vacía
-    }
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data);
-}
-
-// Función para escribir datos en el archivo JSON
-function writeDataToFile(data) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
 // Endpoint para analizar y guardar el color
-app.post('/color', (req, res) => {
+app.post('/color', async (req, res) => {
     const { color } = req.body;
 
-    if (!color || !Array.isArray(color) || color.length !== 3) {git 
+    if (!color || !Array.isArray(color) || color.length !== 3) {
         return res.status(400).json({
             error: "Se requiere un campo 'color' con un array RGB [R, G, B].",
         });
@@ -70,32 +54,38 @@ app.post('/color', (req, res) => {
     // Determinar la dureza y potabilidad
     const hardnessInfo = getWaterHardness(color);
 
-    // Lee los datos actuales del archivo
-    const data = readDataFromFile();
+    // Crear el nuevo dato
+    const newColor = new Color({
+        color,
+        range: hardnessInfo.range,
+        potable: hardnessInfo.potable,
+        timestamp: new Date().toISOString()
+    });
 
-    // Agrega el nuevo dato
-    const newEntry = { 
-        color, 
-        range: hardnessInfo.range, 
-        potable: hardnessInfo.potable, 
-        timestamp: new Date().toISOString() 
-    };
-    data.push(newEntry);
-
-    // Escribe los datos actualizados en el archivo
-    writeDataToFile(data);
-
-    res.json(newEntry);
+    // Guardar en la base de datos
+    try {
+        await newColor.save();
+        res.json(newColor);
+    } catch (error) {
+        console.error('Error al guardar en MongoDB:', error);
+        res.status(500).json({ error: 'Error al guardar en la base de datos' });
+    }
 });
 
 // Endpoint para obtener todos los datos guardados
-app.get('/colors', (req, res) => {
-    const data = readDataFromFile();
-    res.json(data);
+app.get('/colors', async (req, res) => {
+    try {
+        const colors = await Color.find();
+        res.json(colors);
+    } catch (error) {
+        console.error('Error al obtener datos de MongoDB:', error);
+        res.status(500).json({ error: 'Error al obtener datos' });
+    }
 });
 
-app.get('/',(re, res)=>{
-    res.send('Hola mundo')
+// Endpoint de prueba
+app.get('/', (req, res) => {
+    res.send('Hola mundo');
 });
 
 // Servidor corriendo
