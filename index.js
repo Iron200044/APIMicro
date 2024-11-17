@@ -7,7 +7,7 @@ const fs = require('fs');
 
 // Middleware para parsear JSON
 app.use(bodyParser.json());
-
+app.use(express.json());
 app.use(cors());
 
 // Archivo donde se guardarán los datos
