@@ -8,6 +8,13 @@ const fs = require('fs');
 // Middleware para parsear JSON
 app.use(bodyParser.json());
 
+app.use(
+    cors({
+      origin: '*',
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Include OPTIONS method
+    })
+  );
+
 // Archivo donde se guardarán los datos
 const DATA_FILE = './colors.json';
 
