@@ -65,7 +65,8 @@ app.post('/color', async (req, res) => {
     // Guardar en la base de datos
     try {
         await newColor.save();
-        res.json(newColor);
+        // Responder solo con el campo potable
+        res.json({ potable: hardnessInfo.potable });
     } catch (error) {
         console.error('Error al guardar en MongoDB:', error);
         res.status(500).json({ error: 'Error al guardar en la base de datos' });
